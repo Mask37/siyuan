@@ -54,7 +54,7 @@ export const initBlockPopover = (app: App) => {
                         aElement.style.overflow = "";
                     }
                 }
-            } else if (aElement.parentElement.parentElement.classList.contains("av__views")) {
+            } else if (aElement.parentElement.parentElement.classList.contains("av__views") && aElement.parentElement.classList.contains("layout-tab-bar")) {
                 const textElement = aElement.querySelector(".item__text");
                 const desc = aElement.getAttribute("data-desc");
                 if (textElement.scrollWidth > textElement.clientWidth + 2 || desc) {
@@ -82,6 +82,8 @@ export const initBlockPopover = (app: App) => {
                 if (href) {
                     tip = `<span style="word-break: break-all">${href.substring(0, Constants.SIZE_TITLE)}</span>`;
                     tooltipClass = "href"; // 为超链接添加 class https://github.com/siyuan-note/siyuan/issues/11440#issuecomment-2119080691
+                } else {
+                    tip = "";
                 }
                 const title = aElement.getAttribute("data-title");
                 if (tip && isLocalPath(href) && !aElement.classList.contains("b3-tooltips")) {
@@ -211,7 +213,7 @@ const hidePopover = (event: MouseEvent & { path: HTMLElement[] }) => {
     } else {
         // 浮窗上点击菜单，浮窗不能消失 https://ld246.com/article/1632668091023
         const menuElement = hasClosestByClassName(target, "b3-menu");
-        if (menuElement) {
+        if (menuElement && menuElement.getAttribute("data-name") !== "docTreeMore") {
             const blockPanel = window.siyuan.blockPanels.find((item) => {
                 if (item.element.style.zIndex < menuElement.style.zIndex) {
                     return true;

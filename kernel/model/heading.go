@@ -248,10 +248,6 @@ func Doc2Heading(srcID, targetID string, after bool) (srcTreeBox, srcTreePath st
 		pivot.InsertAfter(heading)
 	}
 
-	if contentPivot := treenode.GetNodeInTree(targetTree, targetID); nil != contentPivot && ast.NodeParagraph == contentPivot.Type && nil == contentPivot.FirstChild { // 插入到空的段落块下
-		contentPivot.Unlink()
-	}
-
 	box := Conf.Box(srcTree.Box)
 	if removeErr := box.Remove(srcTree.Path); nil != removeErr {
 		logging.LogWarnf("remove tree [%s] failed: %s", srcTree.Path, removeErr)
@@ -300,7 +296,7 @@ func Heading2Doc(srcHeadingID, targetBoxID, targetPath, previousPath string) (sr
 	}
 
 	box := Conf.Box(targetBoxID)
-	headingText := getNodeRefText0(headingNode, Conf.Editor.BlockRefDynamicAnchorTextMaxLen)
+	headingText := getNodeRefText0(headingNode, Conf.Editor.BlockRefDynamicAnchorTextMaxLen, true)
 	if strings.Contains(headingText, "/") {
 		headingText = strings.ReplaceAll(headingText, "/", "_")
 		util.PushMsg(Conf.language(246), 7000)

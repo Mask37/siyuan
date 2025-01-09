@@ -43,7 +43,7 @@ const windowStatePath = path.join(confDir, "windowState.json");
 let bootWindow;
 let latestActiveWindow;
 let firstOpen = false;
-let workspaces = []; // workspaceDir, id, browserWindow, tray
+let workspaces = []; // workspaceDir, id, browserWindow, tray, hideShortcut
 let kernelPort = 6806;
 let resetWindowStateOnRestart = false;
 
@@ -277,7 +277,9 @@ const initMainWindow = () => {
     let y = windowState.y;
     if (workArea) {
         // 窗口大于 workArea 时缩小会隐藏到左下角，这里使用最小值重置
-        if (windowState.width > workArea.width || windowState.height > workArea.height) { // 重启后窗口大小恢复默认问题 https://github.com/siyuan-note/siyuan/issues/7755
+        if (windowState.width > workArea.width + 32 || windowState.height > workArea.height + 32) {
+            // 重启后窗口大小恢复默认问题 https://github.com/siyuan-note/siyuan/issues/7755 https://github.com/siyuan-note/siyuan/issues/13732
+            // 这里 +32 是因为在某种情况下窗口大小会比 workArea 大几个像素导致恢复默认，+32 可以避免这种特殊情况
             windowState.width = Math.min(defaultWidth, workArea.width);
             windowState.height = Math.min(defaultHeight, workArea.height);
         }
@@ -861,6 +863,15 @@ app.whenReady().then(() => {
                     globalShortcut.unregister(hotKey2Electron(data.accelerator));
                 }
                 break;
+            case "setTrafficLightPosition":
+                if (!currentWindow || !currentWindow.setWindowButtonPosition) {
+                    return;
+                }
+                if (new URL(currentWindow.getURL()).pathname === "/stage/build/app/window.html") {
+                    data.position.y += 5 * data.zoom;
+                }
+                currentWindow.setWindowButtonPosition(data.position);
+                break;
             case "show":
                 if (!currentWindow) {
                     return;
@@ -998,6 +1009,17 @@ app.whenReady().then(() => {
     ipcMain.on("siyuan-quit", (event, port) => {
         exitApp(port);
     });
+    ipcMain.on("siyuan-show-window", (event) => {
+        const mainWindow = getWindowByContentId(event.sender.id);
+        if (!mainWindow) {
+            return;
+        }
+
+        if (mainWindow.isMinimized()) {
+            mainWindow.restore();
+        }
+        mainWindow.show();
+    });
     ipcMain.on("siyuan-open-window", (event, data) => {
         const mainWindow = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
         const mainBounds = mainWindow.getBounds();
@@ -1098,6 +1120,12 @@ app.whenReady().then(() => {
         if (!data.hotkeys || data.hotkeys.length === 0) {
             return;
         }
+        workspaces.find(workspaceItem => {
+            if (event.sender.id === workspaceItem.browserWindow.webContents.id) {
+                workspaceItem.hotkeys = data.hotkeys;
+                return true;
+            }
+        });
         data.hotkeys.forEach((item, index) => {
             const shortcut = hotKey2Electron(item);
             if (!shortcut) {
@@ -1111,11 +1139,19 @@ app.whenReady().then(() => {
                     let currentWorkspace;
                     const currentWebContentsId = (latestActiveWindow && !latestActiveWindow.isDestroyed()) ? latestActiveWindow.webContents.id : undefined;
                     workspaces.find(workspaceItem => {
-                        if ((currentWebContentsId || event.sender.id) === workspaceItem.browserWindow.webContents.id) {
+                        if (currentWebContentsId === workspaceItem.browserWindow.webContents.id && workspaceItem.hotkeys[0] === item) {
                             currentWorkspace = workspaceItem;
                             return true;
                         }
                     });
+                    if (!currentWorkspace) {
+                        workspaces.find(workspaceItem => {
+                            if (workspaceItem.hotkeys[0] === item && event.sender.id === workspaceItem.browserWindow.webContents.id) {
+                                currentWorkspace = workspaceItem;
+                                return true;
+                            }
+                        });
+                    }
                     if (!currentWorkspace) {
                         return;
                     }
