@@ -16,7 +16,7 @@ env:
 jobs:
   create_release:
     name: Create Release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_version: ${{ steps.release_info.outputs.release_version }}
