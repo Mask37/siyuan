@@ -352,7 +352,7 @@ func ImportSY(zipPath, boxID, toPath string) (err error) {
 			bIDs := deckToImport.GetBlockIDs()
 			cards := deckToImport.GetCardsByBlockIDs(bIDs)
 			for _, card := range cards {
-				deck.AddCard(card.ID(), blockIDs[card.BlockID()])
+				deck.AddCard(ast.NewNodeID(), blockIDs[card.BlockID()])
 			}
 
 			if 0 < len(cards) {
@@ -1144,6 +1144,8 @@ func processBase64Img(n *ast.Node, dest string, assetDirPath string) {
 	case "image/jpeg":
 		img, decodeErr = jpeg.Decode(dataReader)
 		ext = ".jpg"
+	case "image/svg+xml":
+		ext = ".svg"
 	default:
 		logging.LogWarnf("unsupported base64 image type [%s]", typ)
 		return
@@ -1174,6 +1176,8 @@ func processBase64Img(n *ast.Node, dest string, assetDirPath string) {
 		encodeErr = png.Encode(tmpFile, img)
 	case "image/jpeg":
 		encodeErr = jpeg.Encode(tmpFile, img, &jpeg.Options{Quality: 100})
+	case "image/svg+xml":
+		_, encodeErr = tmpFile.Write(unbased)
 	}
 	if nil != encodeErr {
 		logging.LogErrorf("encode base64 image failed: %s", encodeErr)

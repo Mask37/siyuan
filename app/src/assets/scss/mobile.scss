@@ -260,6 +260,7 @@
     flex-direction: column;
     height: 100%;
     box-sizing: border-box;
+    position: relative;
 
     &__list {
       overflow: auto;
@@ -513,11 +514,6 @@
   &-scroll {
     right: 0;
   }
-}
-
-.av__views .block__icon,
-.av__row--footer .av__calc {
-  opacity: 1;
 }
 
 .b3-dialog__container {

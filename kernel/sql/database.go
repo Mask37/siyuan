@@ -197,6 +197,10 @@ func initDBTables() {
 	if err != nil {
 		logging.LogFatalf(logging.ExitCodeReadOnlyDatabase, "create table [attributes] failed: %s", err)
 	}
+	_, err = db.Exec("CREATE INDEX idx_attributes_block_id ON attributes(block_id)")
+	if err != nil {
+		logging.LogFatalf(logging.ExitCodeReadOnlyDatabase, "create index [idx_attributes_block_id] failed: %s", err)
+	}
 	_, err = db.Exec("CREATE INDEX idx_attributes_root_id ON attributes(root_id)")
 	if err != nil {
 		logging.LogFatalf(logging.ExitCodeReadOnlyDatabase, "create index [idx_attributes_root_id] failed: %s", err)
@@ -1512,6 +1516,17 @@ func SQLTemplateFuncs(templateFuncMap *template.FuncMap) {
 			stmt = strings.Replace(stmt, "?", arg, 1)
 		}
 		retBlocks = SelectBlocksRawStmt(stmt, 1, 512)
+		return
+	}
+	(*templateFuncMap)["getBlock"] = func(arg any) (retBlock *Block) {
+		switch v := arg.(type) {
+		case string:
+			retBlock = GetBlock(v)
+		case map[string]interface{}:
+			if id, ok := v["id"]; ok {
+				retBlock = GetBlock(id.(string))
+			}
+		}
 		return
 	}
 	(*templateFuncMap)["querySpans"] = func(stmt string, args ...string) (retSpans []*Span) {

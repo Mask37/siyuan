@@ -5,12 +5,13 @@ import {fetchPost} from "../util/fetch";
 import {repos} from "./repos";
 import {confirmDialog} from "../dialog/confirmDialog";
 import {hasClosestByClassName} from "../protyle/util/hasClosest";
-import {getEventName, isIPad} from "../protyle/util/compatibility";
+import {getEventName, isInIOS} from "../protyle/util/compatibility";
 import {processSync} from "../dialog/processSystem";
 import {needSubscribe} from "../util/needSubscribe";
 import {syncGuide} from "../sync/syncGuide";
 import {hideElements} from "../protyle/ui/hideElements";
 import {getCloudURL, getIndexURL} from "./util/about";
+import {iOSPurchase} from "../util/iOSPurchase";
 
 const genSVGBG = () => {
     let html = "";
@@ -29,11 +30,29 @@ const genSVGBG = () => {
 export const account = {
     element: undefined as Element,
     genHTML: (onlyPayHTML = false) => {
-        const hideIPad = isIPad() ? " fn__none" : "";
-        const payHTML = `<a class="b3-button b3-button--big${hideIPad}" href="${getIndexURL("pricing.html")}" target="_blank">
+        const isIOS = isInIOS();
+        let payHTML;
+        if (isIOS) {
+            // 已付费
+            if (window.siyuan.user?.userSiYuanOneTimePayStatus === 1) {
+                payHTML = `<button class="b3-button b3-button--big" data-action="iOSPay" data-type="subscribe">
+    <svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.account4}
+</button>`;
+            } else {
+                payHTML = `<button class="b3-button b3-button--big" data-action="iOSPay" data-type="subscribe">
+    <svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.account10}
+</button>
+<div class="fn__hr"></div>
+<button class="b3-button b3-button--success" data-action="iOSPay" data-type="function">
+    <svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.onepay}
+</button>`;
+            }
+        } else {
+            payHTML = `<a class="b3-button b3-button--big" href="${getIndexURL("pricing.html")}" target="_blank">
     <svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages[window.siyuan.user?.userSiYuanOneTimePayStatus === 1 ? "account4" : "account1"]}
-</a>
-<div class="fn__hr--b${hideIPad}"></div>
+</a>`;
+        }
+        payHTML += `<div class="fn__hr--b"></div>
 <span class="b3-chip b3-chip--primary b3-chip--hover${(window.siyuan.user && window.siyuan.user.userSiYuanSubscriptionStatus === 2) ? " fn__none" : ""}" id="trialSub">
     <svg class="ft__secondary"><use xlink:href="#iconVIP"></use></svg>
     ${window.siyuan.languages.freeSub}
@@ -71,7 +90,7 @@ ${genSVGBG()}
                 userTitlesHTML += "</div>";
             }
             let subscriptionHTML = "";
-            let activeSubscriptionHTML = `<div class="b3-form__icon fn__block">
+            let activeSubscriptionHTML = isIOS ? "" : `<div class="b3-form__icon fn__block">
    <svg class="ft__secondary b3-form__icon-icon"><use xlink:href="#iconVIP"></use></svg>
    <input class="b3-text-field fn__block b3-form__icon-input" style="padding-right: 44px;" placeholder="${window.siyuan.languages.activationCodePlaceholder}">
    <button id="activationCode" class="b3-button b3-button--text" style="position: absolute;right: 0;top: 0;">${window.siyuan.languages.confirm}</button>
@@ -87,7 +106,7 @@ ${genSVGBG()}
     ${window.siyuan.languages.account6} 
     ${Math.max(0, Math.floor((window.siyuan.user.userSiYuanProExpireTime - new Date().getTime()) / 1000 / 60 / 60 / 24))} 
     ${window.siyuan.languages.day} 
-    <a class="${hideIPad}" href="${getCloudURL("subscribe/siyuan")}" target="_blank">${window.siyuan.languages.clickMeToRenew}</a>
+    ${isIOS ? `<a href="javascript:void(0)" data-action="iOSPay" data-type="subscribe">${window.siyuan.languages.clickMeToRenew}</a>` : `<a href="${getCloudURL("subscribe/siyuan")}" target="_blank">${window.siyuan.languages.clickMeToRenew}</a>`}
 </div>`;
                 if (window.siyuan.user.userSiYuanOneTimePayStatus === 1) {
                     subscriptionHTML = `<div class="b3-chip"><svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.onepay}</div>
@@ -96,10 +115,17 @@ ${genSVGBG()}
                 if (window.siyuan.user.userSiYuanSubscriptionPlan === 2) {
                     // 订阅试用
                     subscriptionHTML += `<div class="b3-chip b3-chip--primary"><svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.account3}</div>
-${renewHTML}
-<div class="fn__hr--b"></div>`;
+${renewHTML}<div class="fn__hr--b"></div>`;
                 } else {
-                    subscriptionHTML += `<div class="b3-chip b3-chip--primary"><svg class="ft__secondary"><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.account10}</div>${renewHTML}`;
+                    subscriptionHTML += `<div class="b3-chip b3-chip--primary"><svg class="ft__secondary"><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.account10}</div>
+${renewHTML}<div class="fn__hr--b"></div>`;
+                }
+                if (window.siyuan.user.userSiYuanOneTimePayStatus === 0) {
+                    subscriptionHTML += isIOS ? `<button class="b3-button b3-button--success" data-action="iOSPay" data-type="function">
+    <svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.onepay}
+</button>` : `<a class="b3-button b3-button--success" href="${getIndexURL("pricing.html")}" target="_blank">
+    <svg><use xlink:href="#iconVIP"></use></svg>${window.siyuan.languages.onepay}
+</a>`;
                 }
             } else {
                 if (window.siyuan.user.userSiYuanOneTimePayStatus === 1) {
@@ -122,8 +148,8 @@ ${renewHTML}
     </div>
     <div class="config-account__info">
         <div class="fn__flex">
-            <a class="b3-button b3-button--text${hideIPad}" href="${getCloudURL("settings")}" target="_blank">${window.siyuan.languages.manage}</a>
-            <span class="fn__space${hideIPad}"></span>
+            <a class="b3-button b3-button--text${isIOS ? " fn__none" : ""}" href="${getCloudURL("settings")}" target="_blank">${window.siyuan.languages.manage}</a>
+            <span class="fn__space${isIOS ? " fn__none" : ""}"></span>
             <button class="b3-button b3-button--cancel" id="logout">
                 ${window.siyuan.languages.logout}
             </button>
@@ -150,7 +176,7 @@ ${renewHTML}
         </div>
     </div>
 </div>
-<div class="config-account__center config-account__center--text${window.siyuan.config.system.container === "ios" ? " fn__none" : ""}">
+<div class="config-account__center config-account__center--text">
     <div class="fn__flex-1 fn__hr--b"></div>
     ${subscriptionHTML}
     <div class="fn__flex-1 fn__hr--b"></div>
@@ -219,6 +245,11 @@ ${renewHTML}
 </div>`;
     },
     bindEvent: (element: Element) => {
+        element.querySelectorAll('[data-action="iOSPay"]').forEach(item => {
+            item.addEventListener("click", () => {
+                iOSPurchase(item.getAttribute("data-type"));
+            });
+        });
         const trialSubElement = element.querySelector("#trialSub");
         if (trialSubElement) {
             trialSubElement.addEventListener("click", () => {
@@ -283,7 +314,7 @@ ${renewHTML}
                 });
             });
             const activationCodeElement = element.querySelector("#activationCode");
-            activationCodeElement.addEventListener("click", () => {
+            activationCodeElement?.addEventListener("click", () => {
                 const activationCodeInput = (activationCodeElement.previousElementSibling as HTMLInputElement);
                 fetchPost("/api/account/checkActivationcode", {data: activationCodeInput.value}, (response) => {
                     if (0 !== response.code) {

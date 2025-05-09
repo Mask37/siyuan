@@ -130,6 +130,9 @@
 
       & > [data-node-id] {
         margin-left: 34px;
+      }
+
+      & > [data-node-id]:not(.p):not(.code-block) {
         padding-right: 0;
       }
 
@@ -553,7 +556,7 @@
   }
 
   &--animate {
-    animation: scale .3s ease-in-out;
+    animation: bottom2Top .3s ease-in-out;
   }
 
   div[data-type="NodeMathBlock"] {
@@ -762,4 +765,11 @@
       display: block;
     }
   }
+}
+
+// export pdf 中需要使用 https://github.com/siyuan-note/siyuan/issues/14548
+.protyle-cursor {
+  position: absolute;
+  right: 0;
+  top: 0;
 }

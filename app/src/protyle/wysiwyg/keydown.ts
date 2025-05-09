@@ -30,7 +30,7 @@ import {
     hasPreviousSibling, isEndOfBlock,
     isNotEditBlock,
 } from "./getBlock";
-import {matchHotKey} from "../util/hotKey";
+import {isIncludesHotKey, matchHotKey} from "../util/hotKey";
 import {enter, softEnter} from "./enter";
 import {clearTableCell, fixTable} from "../util/table";
 import {
@@ -86,7 +86,7 @@ export const getContentByInlineHTML = (range: Range, cb: (content: string) => vo
 };
 
 export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
-    editorElement.addEventListener("keydown", (event: KeyboardEvent & { target: HTMLElement }) => {
+    editorElement.addEventListener("keydown", async (event: KeyboardEvent & { target: HTMLElement }) => {
         if (event.target.localName === "protyle-html" || event.target.localName === "input") {
             event.stopPropagation();
             return;
@@ -327,30 +327,6 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
             event.stopPropagation();
             event.preventDefault();
             return;
-        }
-
-        if (event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
-            const selectElements = protyle.wysiwyg.element.querySelectorAll(".protyle-wysiwyg--select");
-            if (selectElements.length > 0) {
-                event.stopPropagation();
-                event.preventDefault();
-                return;
-            }
-
-            if (!range.toString()) {
-                if (event.key === "ArrowRight" && isEndOfBlock(range)) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    return;
-                }
-                const nodeEditableElement = getContenteditableElement(nodeElement);
-                const position = getSelectionOffset(nodeEditableElement, protyle.wysiwyg.element, range);
-                if (position.start === 0 && event.key === "ArrowLeft") {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    return;
-                }
-            }
         }
 
         if (matchHotKey(window.siyuan.config.keymap.editor.general.expandUp.custom, event)) {
@@ -701,6 +677,13 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                                     scrollCenter(protyle, foldElement);
                                     event.stopPropagation();
                                     event.preventDefault();
+                                } else {
+                                    // 修正光标上移至 \n 结尾的块时落点错误 https://github.com/siyuan-note/siyuan/issues/14443
+                                    const prevEditableElement = getContenteditableElement(previousElement) as HTMLElement;
+                                    if (prevEditableElement && prevEditableElement.lastChild.nodeType === 3 &&
+                                        prevEditableElement.lastChild.textContent.endsWith("\n")) {
+                                        prevEditableElement.lastChild.textContent = prevEditableElement.lastChild.textContent.replace(/\n$/, "");
+                                    }
                                 }
                             }
                         }
@@ -946,7 +929,10 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                             return;
                         }
                         // 图片前有一个字符，在字符后删除
-                        if (position.start === 1 && !rangePreviousElement && rangeNextElement && rangeNextElement.nodeType === 1 && rangeNextElement.classList.contains("img")) {
+                        if (position.start === 1 &&
+                            range.startContainer.textContent !== Constants.ZWSP &&  // 如果为 zwsp 需前移光标
+                            !rangePreviousElement &&
+                            rangeNextElement && rangeNextElement.nodeType === 1 && rangeNextElement.classList.contains("img")) {
                             const wbrElement = document.createElement("wbr");
                             range.insertNode(wbrElement);
                             const oldHTML = nodeElement.outerHTML;
@@ -1655,7 +1641,7 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                     updateTransaction(protyle, selectsElement[0].getAttribute("data-node-id"), selectsElement[0].outerHTML, oldHTML);
                 } else {
                     range.insertNode(document.createElement("wbr"));
-                    const sbData = cancelSB(protyle, selectsElement[0]);
+                    const sbData = await cancelSB(protyle, selectsElement[0]);
                     transaction(protyle, sbData.doOperations, sbData.undoOperations);
                     focusByWbr(protyle.wysiwyg.element, range);
                 }
@@ -1684,7 +1670,7 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                     updateTransaction(protyle, selectsElement[0].getAttribute("data-node-id"), selectsElement[0].outerHTML, oldHTML);
                 } else {
                     range.insertNode(document.createElement("wbr"));
-                    const sbData = cancelSB(protyle, selectsElement[0]);
+                    const sbData = await cancelSB(protyle, selectsElement[0]);
                     transaction(protyle, sbData.doOperations, sbData.undoOperations);
                     focusByWbr(protyle.wysiwyg.element, range);
                 }
@@ -1933,6 +1919,31 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                 return;
             }
             return;
+        }
+
+        // 和自定义 alt+shift+左/右 冲突，降低优先级  https://github.com/siyuan-note/siyuan/issues/14638
+        if (event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+            const selectElements = protyle.wysiwyg.element.querySelectorAll(".protyle-wysiwyg--select");
+            if (selectElements.length > 0) {
+                event.stopPropagation();
+                event.preventDefault();
+                return;
+            }
+
+            if (!range.toString()) {
+                if (event.key === "ArrowRight" && isEndOfBlock(range) && !isIncludesHotKey("⌥⇧→")) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+                const nodeEditableElement = getContenteditableElement(nodeElement);
+                const position = getSelectionOffset(nodeEditableElement, protyle.wysiwyg.element, range);
+                if (position.start === 0 && event.key === "ArrowLeft" && !isIncludesHotKey("⌥⇧←")) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+            }
         }
 
         // 置于最后，太多快捷键会使用到选中元素

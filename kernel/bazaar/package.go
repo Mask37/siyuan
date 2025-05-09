@@ -42,7 +42,7 @@ import (
 
 type DisplayName struct {
 	Default string `json:"default"`
-	ArSA	string `json:"ar_SA"`
+	ArSA    string `json:"ar_SA"`
 	DeDE    string `json:"de_DE"`
 	EnUS    string `json:"en_US"`
 	EsES    string `json:"es_ES"`
@@ -58,7 +58,7 @@ type DisplayName struct {
 
 type Description struct {
 	Default string `json:"default"`
-	ArSA	string `json:"ar_SA"`
+	ArSA    string `json:"ar_SA"`
 	DeDE    string `json:"de_DE"`
 	EnUS    string `json:"en_US"`
 	EsES    string `json:"es_ES"`
@@ -74,7 +74,7 @@ type Description struct {
 
 type Readme struct {
 	Default string `json:"default"`
-	ArSA	string `json:"ar_SA"`
+	ArSA    string `json:"ar_SA"`
 	DeDE    string `json:"de_DE"`
 	EnUS    string `json:"en_US"`
 	EsES    string `json:"es_ES"`
@@ -172,7 +172,7 @@ func getPreferredReadme(readme *Readme) string {
 	case "ar_SA":
 		if "" != readme.ArSA {
 			ret = readme.ArSA
-		}		
+		}
 	case "de_DE":
 		if "" != readme.DeDE {
 			ret = readme.DeDE
@@ -532,7 +532,7 @@ func isOutdatedTheme(theme *Theme, bazaarThemes []*Theme) bool {
 	}
 
 	for _, pkg := range bazaarThemes {
-		if theme.URL == pkg.URL && theme.Name == pkg.Name && theme.Author == pkg.Author && 0 > semver.Compare("v"+theme.Version, "v"+pkg.Version) {
+		if theme.URL == pkg.URL && theme.Name == pkg.Name && 0 > semver.Compare("v"+theme.Version, "v"+pkg.Version) {
 			theme.RepoHash = pkg.RepoHash
 			return true
 		}
@@ -552,7 +552,7 @@ func isOutdatedIcon(icon *Icon, bazaarIcons []*Icon) bool {
 	}
 
 	for _, pkg := range bazaarIcons {
-		if icon.URL == pkg.URL && icon.Name == pkg.Name && icon.Author == pkg.Author && 0 > semver.Compare("v"+icon.Version, "v"+pkg.Version) {
+		if icon.URL == pkg.URL && icon.Name == pkg.Name && 0 > semver.Compare("v"+icon.Version, "v"+pkg.Version) {
 			icon.RepoHash = pkg.RepoHash
 			return true
 		}
@@ -572,7 +572,7 @@ func isOutdatedPlugin(plugin *Plugin, bazaarPlugins []*Plugin) bool {
 	}
 
 	for _, pkg := range bazaarPlugins {
-		if plugin.URL == pkg.URL && plugin.Name == pkg.Name && plugin.Author == pkg.Author && 0 > semver.Compare("v"+plugin.Version, "v"+pkg.Version) {
+		if plugin.URL == pkg.URL && plugin.Name == pkg.Name && 0 > semver.Compare("v"+plugin.Version, "v"+pkg.Version) {
 			plugin.RepoHash = pkg.RepoHash
 			return true
 		}
@@ -592,7 +592,7 @@ func isOutdatedWidget(widget *Widget, bazaarWidgets []*Widget) bool {
 	}
 
 	for _, pkg := range bazaarWidgets {
-		if widget.URL == pkg.URL && widget.Name == pkg.Name && widget.Author == pkg.Author && 0 > semver.Compare("v"+widget.Version, "v"+pkg.Version) {
+		if widget.URL == pkg.URL && widget.Name == pkg.Name && 0 > semver.Compare("v"+widget.Version, "v"+pkg.Version) {
 			widget.RepoHash = pkg.RepoHash
 			return true
 		}
@@ -612,7 +612,7 @@ func isOutdatedTemplate(template *Template, bazaarTemplates []*Template) bool {
 	}
 
 	for _, pkg := range bazaarTemplates {
-		if template.URL == pkg.URL && template.Name == pkg.Name && template.Author == pkg.Author && 0 > semver.Compare("v"+template.Version, "v"+pkg.Version) {
+		if template.URL == pkg.URL && template.Name == pkg.Name && 0 > semver.Compare("v"+template.Version, "v"+pkg.Version) {
 			template.RepoHash = pkg.RepoHash
 			return true
 		}
@@ -682,6 +682,17 @@ func renderREADME(repoURL string, mdData []byte) (ret string, err error) {
 	luteEngine.SetSoftBreak2HardBreak(false)
 	luteEngine.SetCodeSyntaxHighlight(false)
 	linkBase := "https://cdn.jsdelivr.net/gh/" + strings.TrimPrefix(repoURL, "https://github.com/")
+	luteEngine.SetLinkBase(linkBase)
+	ret = luteEngine.Md2HTML(string(mdData))
+	ret = util.LinkTarget(ret, linkBase)
+	return
+}
+
+func renderLocalREADME(basePath string, mdData []byte) (ret string, err error) {
+	luteEngine := lute.New()
+	luteEngine.SetSoftBreak2HardBreak(false)
+	luteEngine.SetCodeSyntaxHighlight(false)
+	linkBase := basePath
 	luteEngine.SetLinkBase(linkBase)
 	ret = luteEngine.Md2HTML(string(mdData))
 	ret = util.LinkTarget(ret, linkBase)
